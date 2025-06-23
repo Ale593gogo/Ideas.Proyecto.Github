@@ -15,4 +15,4 @@
 	#R y Rstudio
 #Q4. Sube una foto que represente tu organismo o grupo de organismo. 
 
-touch https://inaturalist-open-data.s3.amazonaws.com/photos/331198558/large.jpg
+![](https://inaturalist-open-data.s3.amazonaws.com/photos/331198558/large.jpg)
