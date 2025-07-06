@@ -1,4 +1,6 @@
-###Ideas.Proyecto.Github
+📒###Ideas.Proyecto.Github📒
+	
+	#Autor: DIEGO PUCUNA 
 	
 ##Q1. En que organismo o grupo de organismo vas a trabajar ?
 
