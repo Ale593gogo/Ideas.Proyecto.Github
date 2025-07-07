@@ -1,4 +1,4 @@
-📒Ideas.Proyecto.Github📒
+🌟Ideas.Proyecto.Github🌟
 	
 	#Autor: DIEGO PUCUNA 
 	
@@ -7,6 +7,11 @@
      Muridae que son una familia roedores perteneciente al suborden Myomorpha
      Su importancia radica en los genes de estos roedores de los cuales tienen importnacia medica en laposible cura para el cancer
 #Q2. Brevemente describe que piensas hacer en tu proyecto?
+		DIRECTORIOS USADOS
+         	📁##[Data/](./Data):Documento con los Genes de Muridae a usar (base de datos)
+	  	📁##[Scripts/](./Scripts):Programa en bash con instrucciones y programas a usar en la terminal y en el proyecto
+    		📁##[Results/](./Results):Aqui se encontraran los archivos despues de haber corrido los programas 
+
 
      ##Primero obtener genes de esta familia y subirlos en la terminal del supercomputador 
      #Despues si estos estan en phy convertirlos a .fasta
