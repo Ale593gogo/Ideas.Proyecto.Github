@@ -8,7 +8,7 @@
      Su importancia radica en los genes de estos roedores de los cuales tienen importnacia medica en laposible cura para el cancer
 # DIRECTORIOS
 
-		DIRECTORIOS USADOS
+DIRECTORIOS USADOS
          	📁 - [Data/](./Data):Documento con los Genes de Muridae a usar (base de datos)
 	  	📁 - [Scripts/](./Scripts):Programa en bash con instrucciones y programas a usar en la terminal y en el proyecto
     		📁 - [Results/](./Results):Aqui se encontraran los archivos despues de haber corrido los programas 
@@ -32,3 +32,4 @@
 #Q4. Sube una foto que represente tu organismo o grupo de organismo. 
 
 ![](https://inaturalist-open-data.s3.amazonaws.com/photos/331198558/large.jpg)
+![](https://www.dicyt.com/data/67/50767.jpg)
