@@ -1,10 +1,11 @@
-📒###Ideas.Proyecto.Github📒
+📒Ideas.Proyecto.Github📒
 	
 	#Autor: DIEGO PUCUNA 
 	
-##Q1. En que organismo o grupo de organismo vas a trabajar ?
+#Q1. En que organismo o grupo de organismo vas a trabajar ?
 
-     ##Muridae que son una familia roedores perteneciente al suborden Myomorpha
+     Muridae que son una familia roedores perteneciente al suborden Myomorpha
+     Su importancia radica en los genes de estos roedores de los cuales tienen importnacia medica en laposible cura para el cancer
 #Q2. Brevemente describe que piensas hacer en tu proyecto?
 
      ##Primero obtener genes de esta familia y subirlos en la terminal del supercomputador 
