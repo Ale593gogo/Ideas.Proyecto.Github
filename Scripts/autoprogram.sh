@@ -1,79 +1,100 @@
 #!/bin/bash
 
-# Script completo para descargar genes de Muridae y procesarlos
+# Directorios y archivos de salida
+output_dir="Muridae_Cancer_Resistance"
+output_file="${output_dir}/combined_sequences.fasta"
+max_sequences=15
+min_sequence_size=300
 
-# 1. Verificar/instalar dependencias
-echo "=== Verificando dependencias ==="
+# Genes a analizar
+cancer_genes=("Trp53" "Brca1" "Chek2" "Puma")
+reference_genes=("cytb" "rag1")
+familia="Muridae"
 
-# Función para instalar NCBI Datasets
-install_datasets() {
-    if ! command -v conda &> /dev/null; then
-        echo "Instalando Miniconda..."
-        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-        bash miniconda.sh -b -p $HOME/miniconda
-        rm miniconda.sh
-        export PATH="$HOME/miniconda/bin:$PATH"
-        conda init bash
-        source ~/.bashrc
+# Crear directorio si no existe
+mkdir -p "$output_dir"
+
+# Encabezado del archivo FASTA
+echo "> Muridae Cancer Resistance Gene Sequences" > "$output_file"
+echo "> Downloaded from NCBI on $(date '+%Y-%m-%d')" >> "$output_file"
+echo "" >> "$output_file"
+
+# Función para descargar secuencias
+download_sequences() {
+    local gen=$1
+    local temp_file="${output_dir}/${gen}_temp.fasta"
+    
+    echo "Descargando secuencias para ${gen}..."
+    
+    # Buscar IDs en NCBI
+    ids=$(curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=nuccore&term=${gen}[GENE]+AND+${familia}[ORGN]&retmax=${max_sequences}" | \
+          grep -Eo '<Id>[0-9]+</Id>' | sed 's/<Id>//;s/<\/Id>//' | tr '\n' ',')
+    
+    if [ -n "$ids" ]; then
+        # Descargar secuencias en formato FASTA
+        curl -s "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=${ids}&rettype=fasta&retmode=text" > "$temp_file"
+        
+        # Filtrar por tamaño mínimo y limitar cantidad
+        awk -v min_len="$min_sequence_size" '
+            /^>/ { 
+                if (seqlen >= min_len && header) print header "\n" seq
+                header=$0; seq=""; seqlen=0 
+            } 
+            !/^>/ { seq=seq $0; seqlen+=length($0) } 
+            END { if (seqlen >= min_len) print header "\n" seq }
+        ' "$temp_file" | head -n $((max_sequences*2)) >> "$output_file"
+        
+        echo "  → ${gen}: OK"
+    else
+        echo "  → ${gen}: No se encontraron secuencias"
     fi
     
-    echo "Instalando NCBI Datasets..."
-    conda install -c conda-forge -c bioconda ncbi-datasets-cli -y
+    rm -f "$temp_file"
+    sleep 1
 }
 
-# Verificar NCBI Datasets
-if ! command -v datasets &> /dev/null; then
-    echo "NCBI Datasets no encontrado, instalando..."
-    install_datasets
-    # Verificar instalación
-    if ! command -v datasets &> /dev/null; then
-        echo "Error: No se pudo instalar NCBI Datasets"
-        exit 1
-    fi
-fi
+# Descargar genes de referencia
+download_references() {
+    for gen in "${reference_genes[@]}"; do
+        download_sequences "$gen"
+        echo "> Reference: ${gen}" >> "$output_file"
+    done
+}
 
-# 2. Configuración
-GENES=("IFIH1" "TP53" "PARP1" "BRCA1")
-OUTPUT_DNA="Muridae_genes.fasta"
-OUTPUT_GENESEDITADOS="Muridae_geneseditados.fasta"
-OUTPUT_DNA_EDITED="${OUTPUT_DNA%.*}_edited.fasta"
-OUTPUT_GENESEDITADOS_EDITED="${OUTPUT_GENESEDITADOS%.*}_edited.fasta"
+# Verificar programas necesarios
+check_tools() {
+    for tool in muscle iqtree2 curl; do
+        if ! command -v $tool &>/dev/null; then
+            echo "Error: $tool no está instalado"
+            exit 1
+        fi
+    done
+}
 
-# 3. Procesamiento
-echo "=== Procesando genes ==="
-> "$OUTPUT_DNA"
-> "$OUTPUT_GENESEDITADOS"
+# Procesamiento principal
+check_tools
 
-for GENE in "${GENES[@]}"; do
-    echo "Descargando $GENE..."
-    
-    # Descargar datos
-    datasets download gene symbol "$GENE" --ortholog Muridae --filename "${GENE}_Muridae.zip"
-    
-    # Extraer y procesar
-    unzip -q "${GENE}_Muridae.zip" -d "${GENE}_Muridae"
-    
-    if [[ -f "${GENE}_Muridae/ncbi_dataset/data/gene.fna" ]]; then
-        dataformat fasta gene --inputfile "${GENE}_Muridae/ncbi_dataset/data/gene.fna" >> "$OUTPUT_DNA"
-    fi
-
-    if [[ -f "${GENE}_Muridae/ncbi_dataset/data/protein.faa" ]]; then
-        dataformat fasta protein --inputfile "${GENE}_Muridae/ncbi_dataset/data/protein.faa" >> "$OUTPUT_GENESEDITADOS"
-    fi
-
-    # Limpieza
-    rm -rf "${GENE}_Muridae.zip" "${GENE}_Muridae"
+# Descargar datos
+for gen in "${cancer_genes[@]}"; do
+    download_sequences "$gen"
 done
 
-# 4. Editar nombres
-echo "Editando nombres de secuencias..."
-perl -pe 's/(>\w+\.\d+)\s.+/\1/' "$OUTPUT_DNA" > "$OUTPUT_DNA_EDITED"
-perl -pe 's/(>\w+\.\d+)\s.+/\1/' "$OUTPUT_GENESEDITADOS" > "$OUTPUT_GENESEDITADOS_EDITED"
+download_references
 
-# 5. Resultados
-echo -e "\n=== Proceso completado ==="
-echo "Archivos generados:"
-echo " - ADN completo: $OUTPUT_DNA"
-echo " - ADN editado: $OUTPUT_DNA_EDITED"
-echo " - Geneseditados completos: $OUTPUT_GENESEDITADOS"
-echo " - Geneseditados editados: $OUTPUT_GENESEDITADOS_EDITED"
+# Procesar secuencias
+echo "Procesando secuencias..."
+sed -i 's/ .*//' "$output_file"  # Simplificar headers
+
+# Alinear con MUSCLE
+aligned_file="alignment.fasta"
+muscle -in "$output_file" -out "$aligned_file" 2>/dev/null
+
+# Construir árbol filogenético
+echo "Construyendo árbol filogenético..."
+iqtree2 -s "$aligned_file" -nt AUTO -quiet -bb 1000
+
+# Resultados finales
+echo "Análisis completado:"
+echo "- Secuencias: $output_file"
+echo "- Alineamiento: $aligned_file"
+echo "- Árbol filogenético: ${aligned_file}.treefile"
