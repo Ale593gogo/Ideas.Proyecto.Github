@@ -81,7 +81,7 @@ done
 
 download_references
 
-# Procesar secuencias
+# Procesar secuencias como si fuera ATOM
 echo "Procesando secuencias..."
 sed -i 's/ .*//' "$output_file"  # Simplificar headers
 
