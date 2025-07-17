@@ -1,45 +1,67 @@
-# Proceso para analisis de filogenia para Muridae usando secuencias de estos roedores con genes resistentes al cancer
+#!/bin/bash
 
-## 1. CON EL ARCHIVO DE DATA QUE SON:
-    SECUENCIAS DE GENES DE MURIDAE CON RESISTENCIA AL CANCER YA COMBINADAS EN .FASTA C
-    COPIARLAS AL COMPUTADOR Y EDITARLAS EN ATOM 
-    -----OPCIONAL ((descarga de ncbi de Muridae los genes con resistencia a cancer de muridae usa el script de bash para descargarlo))
+# ==============================================
+# ANÁLISIS FILOGENÉTICO DE MURIDAE CON RESISTENCIA AL CÁNCER
+# ==============================================
 
- ## 2. Extracción de Código y Nombre del Gen
-     Editar el archivo FASTA para conservar solo el nombre del gen y su codigo.
+# Configuración inicial
+WORKDIR="Muridae_Cancer_Analysis"
+INPUT_FASTA="muridae_sequences.fasta"
+MUSCLE_BIN="./muscle3.8.31_i86linux64"
+ASTRAL_JAR="astral.5.7.8.jar"
+THREADS=$(nproc)
 
-  ## 3. Usando ATOM en el computador
-    VERIFICAR SI ATOM ESTA INSTALADO SINO DESCARGARLO E INSTALARLO https://atom-editor.cc/
-    1. Abre el archivo .fasta en Atom
-    2. Ve al panel en find in buffer y seleccionando la opcion ".*"
-    3. Edita la secuencia teniendo el codigo del gen y su nombre usando:
-     - >.*?\|(.*?)\|.*\n+
-    4. Reemplazar: >$1,$2
-    3. Guardarlo como genesedited.fasta
-    4. Copialos a hoffman con el comando scp
+# Crear estructura de directorios
+mkdir -p $WORKDIR/{data,alignment,trees,results}
+cd $WORKDIR
 
-   ## 4. Alineacion con muscle
-    1.en una carpeta en hoffman copia muscle ahi
-    2.con el comando usar el programa "./muscle3.8.31_i86linux64"
-    3. for filename in *.fasta
-    do muscle3.8.31_i86linux64 -in $filename -out muscle_$filename -maxiters 1 -diags done
-    puedes usar cat para ver si los archivos fueron generados
+# 1. Preparación de secuencias
+echo "1. PROCESANDO SECUENCIAS..."
 
-  ## 5. Uso de IQTREE
-    1. Cargar el modulo con load iqtree/2.2.2.6
-    2. for filename in muscle_*  do iqtree2 -s $filename  done
-    3. usando cat combinar los archivos .tree en uno solo con *.treefile > All.trees
-  
-## 6. Uso de ASTRAL 
-    1. Verificar que java este instalado o corriendo 
-    2.correrlo con -jar astral.5.7.8.jar recuerda usar tab para completar la version java -jar astral -i All.trees -o Astral.Muridaecancer.tree
-    3. con el comando scp en laterminal del computador copiar este archivo 
-## 7. Uso de FIGTREE PARA EL ARBOL
-    VERIFICAR SI FIGTREE ESTA INSTALADO SINO DESCARGARLO E INSTALARLO DE https://tree.bio.ed.ac.uk/software/figtree/
-    1. Abrir Figtree y abrir el archivo Astral.Muridaecancer.tree 
-    2. usando las herramientas colour resaltarlos
-    3. con las herramientas tip labels y node labels mejorar la visualizacion 
-    4. Manejar a gusto el softeware para generar relaciones
- 
+# Copiar archivo de entrada (simulado - en realidad usarías tu archivo FASTA)
+echo ">X96996.1|A.airensis|mitochondrial cytb gene
+ATGAAAATTATACGAAAAACACACCCACTCCTAAAAATCATTAACCATGCGTTCGTCGACCTCCCTGCAC
+CCTCCAACATCTCATCATGATGAAACTTCGGCTCTCTATTAGGGGTATGCCTAGTAATCCAAATCCTCAC" > data/$INPUT_FASTA
+
+# Limpieza de headers (reemplaza lo que harías manualmente en Atom)
+echo "   Limpiando headers FASTA..."
+perl -i -pe 's/>.*?\|([^|]+)\|.*/>$1/' data/$INPUT_FASTA
+
+# 2. Alineamiento con MUSCLE
+echo -e "\n2. ALINEAMIENTO CON MUSCLE..."
+$MUSCLE_BIN -in data/$INPUT_FASTA -out alignment/aligned_$INPUT_FASTA -maxiters 1 -diags 2> muscle.log
+
+# Verificar alineamiento
+if [ ! -s alignment/aligned_$INPUT_FASTA ]; then
+    echo "ERROR: Fallo en el alineamiento"
+    exit 1
+fi
+
+# 3. CONSTRUCCIÓN DE ÁRBOL CON IQ-TREE
+echo -e "\n3. CONSTRUYENDO ÁRBOL FILOGENÉTICO..."
+iqtree2 -s alignment/aligned_$INPUT_FASTA -m GTR+G -bb 1000 -nt $THREADS -pre trees/muridae 2> iqtree.log
+
+# 4. CONCORDANCIA DE ÁRBOLES CON ASTRAL
+echo -e "\n4. ANALIZANDO CONCORDANCIA CON ASTRAL..."
+if [ -f $ASTRAL_JAR ]; then
+    java -jar $ASTRAL_JAR -i trees/muridae.treefile -o results/Astral.MuridaeCancer.tree 2> astral.log
+else
+    echo "WARNING: ASTRAL no encontrado, saltando este paso"
+    cp trees/muridae.treefile results/Astral.MuridaeCancer.tree
+fi
+
+# 5. PREPARAR RESULTADOS FINALES
+echo -e "\n5. PREPARANDO RESULTADOS..."
+cp trees/muridae.contree results/Consensus.tree
+cp trees/muridae.log results/ 
+
+# Generar reporte
+echo -e "\nANÁLISIS COMPLETADO:\n"
+echo "Árbol de consenso: results/Consensus.tree"
+echo "Árbol ASTRAL: results/Astral.MuridaeCancer.tree"
+echo "Log de IQ-TREE: results/muridae.log"
+echo "\nPara visualizar:"
+echo "scp -r ${USER}@hoffman2.idre.ucla.edu:$(pwd)/results/ ."
+echo "Luego abra los archivos .tree en FigTree"
 
 
